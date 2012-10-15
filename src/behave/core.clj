@@ -7,25 +7,55 @@
     {:x (f (:x pos1) (:x pos2)) :y (f (:y pos1) (:y pos2))}))
 (def add (axis-wise +))
 (def subtract (axis-wise -))
+(def multiply (axis-wise *))
 (def divide (axis-wise /))
+(def power (axis-wise #(Math/pow %1 %2)))
+(def pos-min (axis-wise min))
+(defn length [pos]
+  (Math/sqrt (+ (Math/pow (:x pos) 2) (Math/pow (:y pos) 2))))
+(defn move
+  [x step]
+  (assoc x :pos (add (:pos x) step)))
+
 (defn gravitate
   [center]
-  (fn [x]
-    (let [distance (subtract center (:pos x))
+  (fn [x others]
+    (let [distance (subtract center (:pos x) )
           step (divide distance {:x 10 :y 10})]
-    (assoc x :pos (add (:pos x) step)))))
+      (move x step))))
 
-(defn random-position [] {:x (+ 100 (rand-int 100)) :y (+ 100 (rand-int 100))})
+(defn wander
+  [x others]
+  (move x {:x (- 1 (rand-int 3)) :y (- 1 (rand-int 3))}))
+
+(defn repulse
+  [x other]
+  (let [displacement (subtract (:pos x) (:pos other))
+        force (power displacement {:x -1 :y -1})]
+    (multiply {:x 5 :y 5} force)))
+
+(defn not-me
+  [x others]
+  (filter #(not (= x %)) others))
+
+(defn seek-personal-space
+  [x others]
+  (time 
+  (let [repulsions (map #(repulse x @%) others)
+        total-force (reduce add repulsions)]
+    (move x total-force))))
+    
+(defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
 (defn gen-behaver
   []
-  (agent {:pos (random-position) :behaviors #{(gravitate {:x 100 :y 100})}}))
+  (agent {:pos (random-position) :behaviors #{wander seek-personal-space (gravitate {:x 200 :y 200})}}))
 (def behavers (repeatedly 10 gen-behaver))
 
 (defn behave
-  [b]
+  [b others]
   (let [behaviors (:behaviors @b)]
     (doseq [behavior behaviors]
-      (send b behavior))))
+      (send-off b behavior others))))
 
 (defn setup []
   (smooth)                          ;;Turn on anti-aliasing
@@ -38,17 +68,33 @@
   (fill background-color)
   (rect 0 0 (width) (height)))
 
+(def *shown* nil)
+
 (defn draw-behaver
   [behaver]
+  (fill 255)
+  (if (= behaver *shown*)
+    (fill 200))
   (let [pos (:pos @behaver)]
     (ellipse (:x pos) (:y pos) 10 10)))
+
+(defn behave-all
+  [bs]
+  (doseq [b bs]
+    (behave b (not-me b bs))))
+
+(defn step-behavior
+  [n bs]
+  (dotimes [m n]
+    (behave-all bs)))
+
+(defn show [x]
+  (def *shown* x))
 
 (defn draw []
   (clear)
   (stroke 0)
-  (doseq [b behavers]
-    (behave b)
-    (draw-behaver b)))
+  (doseq [b behavers] (draw-behaver b)))
 
 
 (defn run []
@@ -57,3 +103,11 @@
   :setup setup                      ;;Specify the setup fn
   :draw draw                        ;;Specify the draw fn
   :size [323 200]))
+
+(def a (first behavers))
+(set-error-handler! a prn)
+
+(defn timetest
+  [n]
+  (dotimes [m n]
+    (time (step-behavior 1000 behavers))))
