@@ -40,22 +40,21 @@
 
 (defn seek-personal-space
   [x others]
-  (time 
   (let [repulsions (map #(repulse x @%) others)
         total-force (reduce add repulsions)]
-    (move x total-force))))
+    (move x total-force)))
     
 (defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
 (defn gen-behaver
   []
-  (agent {:pos (random-position) :behaviors #{wander seek-personal-space (gravitate {:x 200 :y 200})}}))
+  (atom {:pos (random-position) :behaviors #{wander seek-personal-space (gravitate {:x 200 :y 200})}}))
 (def behavers (repeatedly 10 gen-behaver))
 
 (defn behave
   [b others]
   (let [behaviors (:behaviors @b)]
     (doseq [behavior behaviors]
-      (send-off b behavior others))))
+      (swap! b behavior others))))
 
 (defn setup []
   (smooth)                          ;;Turn on anti-aliasing
@@ -105,7 +104,6 @@
   :size [323 200]))
 
 (def a (first behavers))
-(set-error-handler! a prn)
 
 (defn timetest
   [n]
