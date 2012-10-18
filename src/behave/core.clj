@@ -17,38 +17,58 @@
   [x step]
   (assoc x :pos (add (:pos x) step)))
 
+(def G 100)
+
 (defn gravitate
-  [center]
-  (fn [x others]
-    (let [distance (subtract center (:pos x) )
-          step (divide distance {:x 10 :y 10})]
-      (move x step))))
+  [x others]
+      (let [distance (subtract {:x 200 :y 500} (:pos x) )
+          step (divide distance {:x G :y G})]
+      (move x step)))
 
 (defn wander
   [x others]
   (move x {:x (- 1 (rand-int 3)) :y (- 1 (rand-int 3))}))
 
-(defn repulse
+(defn distance-inverse
   [x other]
-  (let [displacement (subtract (:pos x) (:pos other))
-        force (power displacement {:x -1 :y -1})]
-    (multiply {:x 5 :y 5} force)))
+  (power
+   (subtract (:pos x) (:pos other))
+   {:x -1 :y -1}))
+
+(def rep 15)
+
+(defn repulse
+  [x other] 
+  (pos-min {:x 10 :y 10}  (multiply {:x rep :y rep} (distance-inverse x other))))
+
+(def attr -10)
+
+(defn attract
+  [x other]
+  (multiply {:x attr :y attr} (distance-inverse x other)))
 
 (defn not-me
   [x others]
   (filter #(not (= x %)) others))
 
-(defn seek-personal-space
-  [x others]
-  (let [repulsions (map #(repulse x @%) others)
-        total-force (reduce add repulsions)]
-    (move x total-force)))
-    
+(defn interact
+  [f]
+  (fn [x others]
+    (let [total-force (reduce add (map #(f x @%) others))]
+      (move x total-force))))
+
+(def seek-personal-space (interact repulse))
+
+(def socialize (interact attract))
+
+
+  
+
 (defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
 (defn gen-behaver
   []
-  (atom {:pos (random-position) :behaviors #{wander seek-personal-space (gravitate {:x 200 :y 200})}}))
-(def behavers (repeatedly 10 gen-behaver))
+  (atom {:pos (random-position) :behaviors #{wander seek-personal-space gravitate socialize}}))
+(def behavers (repeatedly 20 gen-behaver))
 
 (defn behave
   [b others]
@@ -86,6 +106,16 @@
   [n bs]
   (dotimes [m n]
     (behave-all bs)))
+
+(def rest 20)
+
+(defn behave-forever
+  [bs]
+  (future
+    (loop []
+      (Thread/sleep rest)
+      (behave-all bs)
+      (recur))))
 
 (defn show [x]
   (def *shown* x))
