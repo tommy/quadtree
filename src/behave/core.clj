@@ -65,9 +65,12 @@
   
 
 (defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
+(defn random-color [] (rand-nth [:red :blue]))
 (defn gen-behaver
   []
-  (atom {:pos (random-position) :behaviors #{wander seek-personal-space gravitate socialize}}))
+  (atom {:pos (random-position)
+         :color (random-color)
+         :behaviors #{wander seek-personal-space gravitate socialize}}))
 (def behavers (repeatedly 20 gen-behaver))
 
 (defn behave
@@ -89,9 +92,11 @@
 
 (def *shown* nil)
 
+(def rgb {:red '(255 0 0) :blue '(0 0 255)})
+
 (defn draw-behaver
   [behaver]
-  (fill 255)
+  (apply fill (rgb (:color @behaver)))
   (if (= behaver *shown*)
     (fill 200))
   (let [pos (:pos @behaver)]
