@@ -65,7 +65,7 @@
   
 
 (defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
-(defn random-color [] (rand-nth [:red :blue]))
+(defn random-color [] (rand-nth [:red :green]))
 (defn gen-behaver
   []
   (atom {:pos (random-position)
@@ -84,19 +84,18 @@
   (frame-rate 30)                    ;;Set framerate to 1 FPS
   (background 200))                 ;;Set the background colour to
 
-(def background-color 255)
-
 (defn clear []
-  (fill background-color)
+  (fill 236 208 120)
   (rect 0 0 (width) (height)))
 
 (def *shown* nil)
 
-(def rgb {:red '(255 0 0) :blue '(0 0 255)})
+(def rgb {:red '(192 41 36) :green '(83 119 122)})
 
 (defn draw-behaver
   [behaver]
   (apply fill (rgb (:color @behaver)))
+  (apply stroke (rgb (:color @behaver)))
   (if (= behaver *shown*)
     (fill 200))
   (let [pos (:pos @behaver)]
