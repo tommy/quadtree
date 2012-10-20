@@ -140,7 +140,11 @@
   (if (= behaver *shown*)
     (fill 200))
   (let [pos (:pos @behaver)]
-    (ellipse (:x pos) (:y pos) 10 10)))
+    (ellipse (:x pos) (:y pos) 10 10)
+    (dotimes [m 10]
+      (no-fill)
+      (let [r (+ 20 (* 10 m))]
+        (ellipse (:x pos) (:y pos) r r)))))
 
 (defn behave-all
   [bs]
