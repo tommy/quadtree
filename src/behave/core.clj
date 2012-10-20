@@ -112,7 +112,7 @@
          :goal (random-position 300 600)
          :color (random-color)
          :behaviors #{wander}}))
-(def behavers (repeatedly 2 gen-behaver))
+(def behavers (repeatedly 50 gen-behaver))
 
 (defn behave
   [b others]
@@ -131,7 +131,7 @@
 
 (def *shown* nil)
 
-(def rgb {:red '(192 41 36) :green '(83 119 122)})
+(def rgb {:red [192 41 36] :green [83 122 119]})
 
 (defn draw-behaver
   [behaver]
@@ -140,9 +140,10 @@
   (if (= behaver *shown*)
     (fill 200))
   (let [pos (:pos @behaver)]
-    (ellipse (:x pos) (:y pos) 10 10)
+    (ellipse (:x pos) (:y pos)  10 10)
     (dotimes [m 10]
-      (no-fill)
+      (apply stroke (conj (rgb (:color @behaver)) (- 50 (* 50 (/ m 10)))))
+      (apply fill (conj (rgb (:color @behaver)) (- 50 (* 50 (/ m 10)))))
       (let [r (+ 20 (* 10 m))]
         (ellipse (:x pos) (:y pos) r r)))))
 
@@ -156,7 +157,7 @@
   (dotimes [m n]
     (behave-all bs)))
 
-(def rest 1)
+(def rest 5)
 
 (defn behave-forever
   [bs]
