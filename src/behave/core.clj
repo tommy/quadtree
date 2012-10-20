@@ -11,6 +11,8 @@
 (def divide (axis-wise /))
 (def power (axis-wise #(Math/pow %1 %2)))
 (def pos-min (axis-wise min))
+(def within (axis-wise (fn [bounds x]
+                         (-> x (max (first bounds)) (min (second bounds))))))
 (defn length [pos]
   (Math/sqrt (+ (Math/pow (:x pos) 2) (Math/pow (:y pos) 2))))
 (defn move
@@ -87,7 +89,11 @@
 
 (defn new-goal
   [x]
-  (assoc x :goal (random-map-position)))
+  (let [angle (* (rand) 2 Math/PI)
+        unit {:x (Math/cos angle) :y (Math/sin angle)}
+        distance (rand-int 50)
+        new (add (:pos x) (multiply {:x distance :y distance} unit))]
+  (assoc x :goal (within {:x [0 300] :y [0 600]} new))))
 
 (defn distance-from-goal
   [x]
