@@ -31,7 +31,7 @@
    (subtract (:pos x) (:pos other))
    {:x -1 :y -1}))
 
-(def rep 15)
+(def rep 0.1)
 
 (defn repulse
   [x other] 
@@ -75,7 +75,7 @@
   [x position]
   (let [displacement (subtract position (:pos x))
         magnitude (length displacement)
-        step (multiply {:x 0.1 :y 0.1} (divide displacement {:x magnitude :y magnitude}))]
+        step (multiply {:x 1 :y 1} (divide displacement {:x magnitude :y magnitude}))]
     (move x step)))
 
 (defn seek-goal
