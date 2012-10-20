@@ -78,9 +78,7 @@
         step (multiply {:x 1 :y 1} (divide displacement {:x magnitude :y magnitude}))]
     (move x step)))
 
-(defn seek-goal
-  [x others]
-  (step-towards x (:goal x)))
+
 
 (defn random-position [x y] {:x (rand-int x) :y (rand-int y)})
 
@@ -99,11 +97,23 @@
   [x]
   (< (distance-from-goal x) 5))
 
-(defn wander
+(defn seek-goal
   [x others]
   (if (at-goal x)
-    (new-goal x)
-    (seek-goal x others)))
+    x
+  (step-towards x (:goal x))))
+
+(defn with-probability
+  [p f else-f]
+  (if (< (rand) p)
+    (f)
+    (else-f)))
+
+(defn wander
+  [x others]
+  (with-probability 0.01
+    #(new-goal x)
+    #(identity x)))
 
 (defn random-color [] (rand-nth [:red :green]))
 (defn gen-behaver
@@ -111,8 +121,8 @@
   (atom {:pos (random-position 300 600)
          :goal (random-position 300 600)
          :color (random-color)
-         :behaviors #{wander}}))
-(def behavers (repeatedly 50 gen-behaver))
+         :behaviors #{wander seek-goal}}))
+(def behavers (repeatedly 5 gen-behaver))
 
 (defn behave
   [b others]
