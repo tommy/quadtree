@@ -25,10 +25,6 @@
           step (divide distance {:x G :y G})]
       (move x step)))
 
-(defn wander
-  [x others]
-  (move x {:x (- 1 (rand-int 3)) :y (- 1 (rand-int 3))}))
-
 (defn distance-inverse
   [x other]
   (power
@@ -47,6 +43,20 @@
   [x other]
   (multiply {:x attr :y attr} (distance-inverse x other)))
 
+(defn same-color [x y] (= (:color x) (:color y)))
+
+(defn seek-similar
+  [x other]
+  (if (same-color x other)
+    (attract x other)
+    {:x 0 :y 0}))
+
+(defn fear-others
+  [x other]
+  (if (same-color x other)
+    {:x 0 :y 0}
+    (repulse x other)))
+
 (defn not-me
   [x others]
   (filter #(not (= x %)) others))
@@ -61,17 +71,48 @@
 
 (def socialize (interact attract))
 
+(defn step-towards
+  [x position]
+  (let [displacement (subtract position (:pos x))
+        magnitude (length displacement)
+        step (multiply {:x 0.1 :y 0.1} (divide displacement {:x magnitude :y magnitude}))]
+    (move x step)))
 
-  
+(defn seek-goal
+  [x others]
+  (step-towards x (:goal x)))
 
-(defn random-position [] {:x (+ 100 (rand-int 200)) :y (+ 100 (rand-int 500))})
+(defn random-position [x y] {:x (rand-int x) :y (rand-int y)})
+
+(defn random-map-position []
+  (random-position 300 600))
+
+(defn new-goal
+  [x]
+  (assoc x :goal (random-map-position)))
+
+(defn distance-from-goal
+  [x]
+  (abs (length (subtract (:pos x) (:goal x)))))
+
+(defn at-goal
+  [x]
+  (< (distance-from-goal x) 5))
+
+(defn wander
+  [x others]
+  (if (at-goal x)
+    (new-goal x)
+    (seek-goal x others)))
+
 (defn random-color [] (rand-nth [:red :green]))
 (defn gen-behaver
   []
-  (atom {:pos (random-position)
+  (atom {:pos (random-position 300 600)
+         :goal (random-position 300 600)
          :color (random-color)
-         :behaviors #{wander seek-personal-space gravitate socialize}}))
-(def behavers (repeatedly 20 gen-behaver))
+         :behaviors #{wander}}))
+(def behavers (repeatedly 2 gen-behaver))
 
 (defn behave
   [b others]
@@ -111,7 +152,7 @@
   (dotimes [m n]
     (behave-all bs)))
 
-(def rest 20)
+(def rest 1)
 
 (defn behave-forever
   [bs]
@@ -128,7 +169,6 @@
   (clear)
   (stroke 0)
   (doseq [b behavers] (draw-behaver b)))
-
 
 (defn run []
   (defsketch example                  ;;Define a new sketch named example
