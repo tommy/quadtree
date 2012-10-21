@@ -2,7 +2,8 @@
   (:use quil.core)
   (:use behave.util)
   (:use behave.goals)
-  (:use behave.draw))
+  (:use behave.draw)
+  (:use behave.language))
 
 (defn not-me
   [x others]
@@ -34,7 +35,7 @@
                  drift-language
                  drift-language-towards-neighbors}}))
 
-(def behavers (conj (repeatedly 20 gen-behaver) player))
+(def behavers (conj (repeatedly 5 gen-behaver) player))
 
 (defn behave
   [b others]
