@@ -30,12 +30,6 @@
     (doseq [behavior behaviors]
       (swap! b behavior others))))
 
-
-
-(def *shown* nil)
-
-
-
 (defn behave-all
   [bs]
   (doseq [b bs]
@@ -56,12 +50,3 @@
       (behave-all bs)
       (recur))))
 
-(defn show [x]
-  (def *shown* x))
-
-(def a (first behavers))
-
-(defn timetest
-  [n]
-  (dotimes [m n]
-    (time (step-behavior 1000 behavers))))
