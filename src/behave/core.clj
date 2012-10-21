@@ -15,11 +15,26 @@
   (atom {:pos (random-position 300 600)
          :goal (random-position 300 600)
          :language (random-language)
+         :player false
          :behaviors #{wander
                       seek-goal
                       drift-language
                       drift-language-towards-neighbors}}))
-(def behavers (repeatedly 20 gen-behaver))
+
+
+
+(defn follow-cursor
+  [x others]
+  (assoc x :pos @cursor-position))
+
+(def player
+  (atom
+   {:pos (random-position 300 600)
+    :player true
+    :language [255 0 0]
+    :behaviors #{follow-cursor}}))
+
+(def behavers (conj (repeatedly 20 gen-behaver) player))
 
 (defn behave
   [b others]
