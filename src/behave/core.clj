@@ -13,13 +13,6 @@
 (defn random-map-position []
   (random-position 300 600))
 
-(defn wander
-  [x others]
-  (with-probability 0.01
-    #(new-goal x)
-    #(identity x)))
-
-
 (defn gen-behaver
   []
   (atom {:pos (random-position 300 600)

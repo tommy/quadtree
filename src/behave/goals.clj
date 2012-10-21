@@ -29,3 +29,12 @@
   (if (at-goal x)
     x
   (step-towards x (:goal x))))
+
+(defn wander
+  [x others]
+  (with-probability 0.01
+    #(new-goal x)
+    #(identity x)))
+
+
+
