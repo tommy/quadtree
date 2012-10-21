@@ -1,6 +1,10 @@
 (ns behave.core
   (:use quil.core))
 
+(defn within-values
+  [bounds x]
+  (-> x (max (first bounds)) (min (second bounds))))
+
 (defn axis-wise
   [f]
   (fn [pos1 pos2]
@@ -11,8 +15,7 @@
 (def divide (axis-wise /))
 (def power (axis-wise #(Math/pow %1 %2)))
 (def pos-min (axis-wise min))
-(def within (axis-wise (fn [bounds x]
-                         (-> x (max (first bounds)) (min (second bounds))))))
+(def within (axis-wise within-values))
 (defn length [pos]
   (Math/sqrt (+ (Math/pow (:x pos) 2) (Math/pow (:y pos) 2))))
 (defn move
@@ -121,14 +124,26 @@
     #(new-goal x)
     #(identity x)))
 
-(defn random-color [] (rand-nth [:red :green]))
+(defn mutate-language
+  [lang]
+  (with-probability 0.01
+    (fn [] (map #(within-values [30 230] (- (+ (rand-int 3) %) 1)) lang))
+    #(identity lang)))
+
+(defn drift-language
+  [x others]
+  (assoc x :language (mutate-language (:language x))))
+
+(defn random-language [] (rand-nth [[192 41 36] [83 122 119]]))
 (defn gen-behaver
   []
   (atom {:pos (random-position 300 600)
          :goal (random-position 300 600)
-         :color (random-color)
-         :behaviors #{wander seek-goal}}))
-(def behavers (repeatedly 5 gen-behaver))
+         :language (random-language)
+         :behaviors #{wander
+                      seek-goal
+                      drift-language}}))
+(def behavers (repeatedly 10 gen-behaver))
 
 (defn behave
   [b others]
@@ -147,19 +162,17 @@
 
 (def *shown* nil)
 
-(def rgb {:red [192 41 36] :green [83 122 119]})
-
 (defn draw-behaver
   [behaver]
-  (apply fill (rgb (:color @behaver)))
-  (apply stroke (rgb (:color @behaver)))
+  (apply fill (:language @behaver))
+  (apply stroke (:language @behaver))
   (if (= behaver *shown*)
     (fill 200))
   (let [pos (:pos @behaver)]
     (ellipse (:x pos) (:y pos)  10 10)
     (dotimes [m 10]
-      (apply stroke (conj (rgb (:color @behaver)) (- 50 (* 50 (/ m 10)))))
-      (apply fill (conj (rgb (:color @behaver)) (- 50 (* 50 (/ m 10)))))
+      (apply stroke (conj (:language @behaver) (- 50 (* 50 (/ m 10)))))
+      (apply fill (conj (:language @behaver) (- 50 (* 50 (/ m 10)))))
       (let [r (+ 20 (* 10 m))]
         (ellipse (:x pos) (:y pos) r r)))))
 
