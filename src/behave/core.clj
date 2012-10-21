@@ -83,8 +83,6 @@
         step (multiply {:x 1 :y 1} (divide displacement {:x magnitude :y magnitude}))]
     (move x step)))
 
-
-
 (defn random-position [x y] {:x (rand-int x) :y (rand-int y)})
 
 (defn random-map-position []
@@ -124,6 +122,21 @@
     #(new-goal x)
     #(identity x)))
 
+(defn within-radius
+  [x others r]
+  (filter #(< (length (subtract (:pos x) (:pos %))) r) others))
+
+(defn average [x y] (/ (+ x y) 2))
+
+(defn move-language-towards
+  [x other]
+  (assoc x :language (vec (map average (:language x) (:language other)))))
+
+(defn drift-language-towards-neighbors
+  [x others]
+  (let [neighbors (within-radius x others 50)]
+    (reduce move-language-towards x neighbors)))
+
 (defn mutate-language
   [lang]
   (with-probability 1
@@ -142,8 +155,9 @@
          :language (random-language)
          :behaviors #{wander
                       seek-goal
-                      drift-language}}))
-(def behavers (repeatedly 10 gen-behaver))
+                      drift-language
+                      drift-language-towards-neighbors}}))
+(def behavers (repeatedly 20 gen-behaver))
 
 (defn behave
   [b others]
@@ -179,7 +193,7 @@
 (defn behave-all
   [bs]
   (doseq [b bs]
-    (behave b (not-me b bs))))
+    (behave b (map #(identity @%) (not-me b bs)))))
 
 (defn step-behavior
   [n bs]
