@@ -21,8 +21,6 @@
                       drift-language
                       drift-language-towards-neighbors}}))
 
-
-
 (defn follow-cursor
   [x others]
   (assoc x :pos @cursor-position))
@@ -32,7 +30,9 @@
    {:pos (random-position 300 600)
     :player true
     :language [255 0 0]
-    :behaviors #{follow-cursor}}))
+    :behaviors #{follow-cursor
+                 drift-language
+                 drift-language-towards-neighbors}}))
 
 (def behavers (conj (repeatedly 20 gen-behaver) player))
 
