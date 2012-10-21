@@ -10,9 +10,6 @@
 
 (defn random-position [x y] {:x (rand-int x) :y (rand-int y)})
 
-(defn random-map-position []
-  (random-position 300 600))
-
 (defn gen-behaver
   []
   (atom {:pos (random-position 300 600)
