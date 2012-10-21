@@ -126,15 +126,15 @@
 
 (defn mutate-language
   [lang]
-  (with-probability 0.01
-    (fn [] (map #(within-values [30 230] (- (+ (rand-int 3) %) 1)) lang))
+  (with-probability 1
+    (fn [] (vec (map #(within-values [30 230] (- (+ (rand-int 3) %) 1)) lang)))
     #(identity lang)))
 
 (defn drift-language
   [x others]
   (assoc x :language (mutate-language (:language x))))
 
-(defn random-language [] (rand-nth [[192 41 36] [83 122 119]]))
+(defn random-language [] (vec (repeatedly 3 #(rand-int 255))))
 (defn gen-behaver
   []
   (atom {:pos (random-position 300 600)
