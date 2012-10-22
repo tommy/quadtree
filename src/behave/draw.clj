@@ -16,16 +16,27 @@
   (apply stroke (:language @behaver))
   (let [pos (:pos @behaver)]
     (ellipse (:x pos) (:y pos)  10 10)
+    (if (:player @behaver)
+      (do
+        (ellipse (:x pos) (:y pos) 20 20)))
     (dotimes [m 10]
       (apply stroke (conj (:language @behaver) (- 50 (* 50 (/ m 10)))))
       (apply fill (conj (:language @behaver) (- 50 (* 50 (/ m 10)))))
       (let [r (+ 20 (* 10 m))]
         (ellipse (:x pos) (:y pos) r r)))))
 
+(def cursor-position (atom {:x 0 :y 0}))
+
 (defn draw-behavers
   [behavers]
   (fn []
     (clear)
+    (fill 0)
+    (reset! cursor-position {:x (mouse-x) :y (mouse-y)})
+    (text (str "cursor"
+               (:x @cursor-position)
+               " "
+               (:y @cursor-position)) 100 100)
     (stroke 0)
     (doseq [b behavers] (draw-behaver b))))
 
