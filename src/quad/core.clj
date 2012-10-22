@@ -47,6 +47,19 @@
 
 ;; end quadtree zipper code
 
+(defn count-leaves
+  [root]
+  (loop [zipper (quad-zip root)
+         n      0]
+    (if (z/end? zipper) n                 ; if we've reached the end,
+                                          ; return our count
+      (if (leaf? (z/node zipper))
+        (recur (z/next zipper) (inc n))   ; if we're at a leaf, inc n
+        (recur (z/next zipper) n)))))     ; otherwise just move on
+      
+  
+
+
 
 (defn data
   "The data stored in this node and all child nodes."
@@ -68,6 +81,8 @@
 (defn point?
   [p]
   (= Point (class p)))
+
+(def ^{:private true} p (comp g/point g/c))
 
 (defn x
   [^Point p]
@@ -188,7 +203,7 @@
 
   
 
-(defn split
+(defn- split
   [n]
   {:pre [(node? n)
          (= 2 (g/dimension (:boundary n)))]
@@ -221,12 +236,13 @@
 
 (defn query
   [quadtree position-fn center radius]
-  (let [minx (- (x center) radius)
+  (let [center (apply p center)
+        minx (- (x center) radius)
         miny (- (y center) radius)
         maxx (+ (x center) radius)
         maxy (+ (x center) radius)
-        bbox (rectangle (g/point (g/c minx miny))
-                        (g/point (g/c maxx maxy)))
+        bbox (rectangle (p minx miny)
+                        (p maxx maxy))
         zipper (quad-zip quadtree)
         pred (within-node-predicate bbox)
         candidates (data (z/node (follow-pred zipper pred)))
@@ -237,11 +253,27 @@
             (position-fn %)))
      candidates)))
 
+(defn- split-all-leaves
+  [n]
+  ;{:post [(= (* 4 (count-leaves n))
+  ;           (count-leaves %))]}
+  (if (leaf? n)
+    (split n)
+    (assoc n :quads
+      (map split-all-leaves (:quads n)))))
+  
 
-    
+(defn- build-empty-quadtree
+  [boundary depth]
+  (loop [root (node boundary) depth depth]
+    (if-not (zero? depth)
+      (recur (split-all-leaves root) (dec depth))
+      root)))
 
 (defn quad
-  ([position-fn coll] nil)
-  
-  ([position-fn coll capacity]
-  ))
+  [corner1 corner2 position-fn depth coll]
+  (let [boundary (rectangle
+                   (apply p corner1)
+                   (apply p corner2))
+        empty-tree (build-empty-quadtree boundary depth)]
+      (add empty-tree position-fn coll)))
