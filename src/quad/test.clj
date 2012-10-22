@@ -1,6 +1,5 @@
 (ns quad.test
   (:use quad.core)
-  (:require [incanter.core :as i])
   (:require [cljts.geom :as g])
   (:require [cljts.analysis :as a])
   (:require [cljts.relation :as r])
@@ -32,10 +31,10 @@
 
 (def guys
   [
-  {:name "david" :pos (p 0.25 0.25)}
-  {:name "tommy" :pos (p 0.3 0.4)}
-  {:name "stephanie" :pos (p -0.2 -0.2)}
-  {:name "josh" :pos (p -0.4 0.2)}
+  {:name "david" :pos [0.25 0.25]}
+  {:name "tommy" :pos [0.3 0.4]}
+  {:name "stephanie" :pos [-0.2 -0.2]}
+  {:name "josh" :pos [-0.4 0.2]}
   ])
 
 (defn string
