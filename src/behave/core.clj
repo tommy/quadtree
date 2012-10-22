@@ -46,8 +46,7 @@
 
 (defn behave-all
   [bs]
-  (prn 'BS bs)
-  (let [index (qt/quad [0 0] [310 610] position 4  (map deref bs))
+  (let [index (qt/quad [-1000 -1000] [1000 1000] position 4  (map deref bs))
         others #(with-meta (map deref (not-me % bs))  {:index index})]
   (doseq [b bs]
     (behave b (others b)))))
