@@ -3,7 +3,8 @@
   (:use behave.util)
   (:use behave.goals)
   (:use behave.draw)
-  (:use behave.language))
+  (:use behave.language)
+  (:use [quad.core :only [quad]]))
 
 (defn not-me
   [x others]
@@ -39,9 +40,10 @@
 
 (defn behave
   [b others]
-  (let [behaviors (:behaviors @b)]
+  (let [behaviors (:behaviors @b)
+        index (quad others position 4)]
     (doseq [behavior behaviors]
-      (swap! b behavior others))))
+      (swap! b behavior (with-meta others {:index index})))))
 
 (defn behave-all
   [bs]

@@ -1,4 +1,9 @@
-(ns behave.util)
+(ns behave.util
+  (:use [quad.core :only [query]]))
+
+(defn position
+  [x]
+  [(:x (:pos x)) (:y (:pos x))])
 
 (defn within-values
   [bounds x]
@@ -23,7 +28,8 @@
 
 (defn within-radius
   [x others r]
-  (filter #(< (length (subtract (:pos x) (:pos %))) r) others))
+  (let [index (:index (meta others))]
+    (query index position (position x) r)))
 
 (defn with-probability
   [p f else-f]
