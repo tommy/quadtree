@@ -1,6 +1,5 @@
 (ns quad.test
   (:use quad.core)
-  (:require [incanter.core :as i])
   (:require [cljts.geom :as g])
   (:require [cljts.analysis :as a])
   (:require [cljts.relation :as r])
