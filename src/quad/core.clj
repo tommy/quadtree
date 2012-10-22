@@ -148,14 +148,27 @@
           (recur (z/right zipper))   ; otherwise, try the next sibling
       )))))
 
+    
+(defn within-node-predicate
+  "Return a predicate that returns true if geom is contained
+  within the node.
+  
+  That is, returns a function f such that:
+  (f node) <=> (within? geom (:boundary node))"
+  [geom]
+  (comp (partial r/within? geom) :boundary))
+
+(defn covered-by-node-predicate
+  [geom]
+  (fn [node]
+    (r/covers? (:boundary node) geom)))
+
 
 
 (defn- add-one
   [node position-fn e]
   (let [pos (position-fn e)
-        pred (comp
-               (partial r/within? pos) ; the condition on which we descend the
-               :boundary)              ; tree is (within? pos boundary)
+        pred (within-node-predicate pos)
         loc (->
             (quad-zip node)
             (follow-pred pred))]
@@ -191,7 +204,40 @@
         data (:data n)
        ]
     (Node. b quads data)))
-    
+
+;; Quadtree querying
+
+(defn query-geom
+  [quadtree position-fn geometry]
+  {:pre [(= 2 (g/dimension geometry))]}
+  (let [zipper (quad-zip quadtree)
+        pred (within-node-predicate geometry)
+        candidates (data (z/node (follow-pred zipper pred)))
+        ]
+   (filter
+     (comp (partial r/covers? geometry) position-fn)
+     candidates)))
+
+
+(defn query
+  [quadtree position-fn center radius]
+  (let [minx (- (x center) radius)
+        miny (- (y center) radius)
+        maxx (+ (x center) radius)
+        maxy (+ (x center) radius)
+        bbox (rectangle (g/point (g/c minx miny))
+                        (g/point (g/c maxx maxy)))
+        zipper (quad-zip quadtree)
+        pred (within-node-predicate bbox)
+        candidates (data (z/node (follow-pred zipper pred)))
+        ]
+    (filter
+      #(>= radius
+          (a/distance center
+            (position-fn %)))
+     candidates)))
+
+
     
 
 (defn quad
