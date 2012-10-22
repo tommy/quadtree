@@ -201,9 +201,7 @@
    node
    coll))
 
-  
-
-(defn- split
+(defn split
   [n]
   {:pre [(node? n)
          (= 2 (g/dimension (:boundary n)))]
@@ -236,7 +234,8 @@
 
 (defn query
   [quadtree position-fn center radius]
-  (let [center (apply p center)
+  (let [jts-position-fn #(apply p (position-fn %))
+        center (apply p center)
         minx (- (x center) radius)
         miny (- (y center) radius)
         maxx (+ (x center) radius)
@@ -250,7 +249,7 @@
     (filter
       #(>= radius
           (a/distance center
-            (position-fn %)))
+            (jts-position-fn %)))
      candidates)))
 
 (defn- split-all-leaves
@@ -272,8 +271,9 @@
 
 (defn quad
   [corner1 corner2 position-fn depth coll]
-  (let [boundary (rectangle
+  (let [jts-position-fn #(apply p (position-fn %))
+        boundary (rectangle
                    (apply p corner1)
                    (apply p corner2))
         empty-tree (build-empty-quadtree boundary depth)]
-      (add empty-tree position-fn coll)))
+      (add empty-tree jts-position-fn coll)))
