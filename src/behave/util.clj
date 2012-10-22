@@ -3,6 +3,7 @@
 
 (defn position
   [x]
+  {:pre [(map? x)]}
   [(:x (:pos x)) (:y (:pos x))])
 
 (defn within-values

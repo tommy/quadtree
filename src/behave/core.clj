@@ -4,7 +4,7 @@
   (:use behave.goals)
   (:use behave.draw)
   (:use behave.language)
-  (:use [quad.core :only [quad]]))
+  (:require [quad.core :as qt]))
 
 (defn not-me
   [x others]
@@ -40,15 +40,17 @@
 
 (defn behave
   [b others]
-  (let [behaviors (:behaviors @b)
-        index (quad others position 4)]
+  (let [behaviors (:behaviors @b)]
     (doseq [behavior behaviors]
-      (swap! b behavior (with-meta others {:index index})))))
+      (swap! b behavior others))))
 
 (defn behave-all
   [bs]
+  (prn 'BS bs)
+  (let [index (qt/quad [0 0] [310 610] position 4  (map deref bs))
+        others #(with-meta (map deref (not-me % bs))  {:index index})]
   (doseq [b bs]
-    (behave b (map #(identity @%) (not-me b bs)))))
+    (behave b (others b)))))
 
 (defn step-behavior
   [n bs]

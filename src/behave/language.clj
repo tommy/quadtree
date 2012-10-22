@@ -1,7 +1,6 @@
 (ns behave.language
   (:use behave.util))
 
-
 (defn average [x y] (/ (+ x y) 2))
 
 (defn move-language-towards
