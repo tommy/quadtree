@@ -1,4 +1,5 @@
 (defproject behave "0.1.0-SNAPSHOT"
+  :repl-init quad.test
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
