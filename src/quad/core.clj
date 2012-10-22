@@ -81,7 +81,10 @@
   [p]
   (= Point (class p)))
 
-(def ^{:private true} p (comp g/point g/c))
+(defn p
+  [x y]
+  {:pre [(every? (comp not nil?) [x y])]}
+  (g/point (g/c x y)))
 
 (defn x
   [^Point p]
@@ -170,6 +173,7 @@
   That is, returns a function f such that:
   (f node) <=> (within? geom (:boundary node))"
   [geom]
+  {:pre [(g/simple? geom)]}
   (comp (partial r/within? geom) :boundary))
 
 (defn covered-by-node-predicate
@@ -182,7 +186,7 @@
 (defn- add-one
   [node position-fn e]
   (let [pos (position-fn e)
-        pred (within-node-predicate pos)
+        pred (covered-by-node-predicate pos)
         loc (->
             (quad-zip node)
             (follow-pred pred))]
@@ -223,7 +227,7 @@
   [quadtree position-fn geometry]
   {:pre [(= 2 (g/dimension geometry))]}
   (let [zipper (quad-zip quadtree)
-        pred (within-node-predicate geometry)
+        pred (covered-by-node-predicate geometry)
         candidates (data (z/node (follow-pred zipper pred)))
         ]
    (filter
@@ -242,14 +246,14 @@
         bbox (rectangle (p minx miny)
                         (p maxx maxy))
         zipper (quad-zip quadtree)
-        pred (within-node-predicate bbox)
+        pred (covered-by-node-predicate bbox)
         candidates (data (z/node (follow-pred zipper pred)))
         ]
     (filter
       #(>= radius
           (a/distance center
             (jts-position-fn %)))
-     candidates)))
+      candidates)))
 
 (defn- split-all-leaves
   [n]
