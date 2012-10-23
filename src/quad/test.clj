@@ -11,7 +11,7 @@
 (def square
   (g/polygon
     (g/linear-ring
-      [(c -1 -1) (c 1 -1) (c 1 1) (c -1 1) (c -1 -1)])
+      [(c 500 500) (c 100 500) (c 100 100) (c 500 100) (c 500 500)])
     nil))
 
 (def n

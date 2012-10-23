@@ -11,8 +11,8 @@
 (load "private")
 
 ;; functions passed to clojure.zip/zipper
-(def ^:private children :quads)
-(def ^:private branch? (complement leaf?))
+(def children :quads)
+(def branch? (complement leaf?))
 (defn- make-node
   [node children]
   (assoc node :quads children))
