@@ -93,13 +93,18 @@
          (= 2 (g/dimension (:boundary n)))]
    :post [(node? %)
           (every? node? (:quads %))
-          (.equalsTopo (:boundary n)
-                       (reduce a/union (map :boundary (:quads %))))
+            ;(.equalsTopo (:boundary n)
+            ;             (reduce a/union (map :boundary (:quads %))))
           ]}
   (let [b (:boundary n)
         center (g/centroid b)
         corners (bounding-corners b)
-        quads (map (comp node (partial rectangle center)) corners)
+        quads (map
+                (comp
+                  node
+                  (partial a/intersection b)
+                  (partial rectangle center))
+                corners)
         data (:data n)
        ]
     (Node. b quads data)))
@@ -142,7 +147,7 @@
             (position-fn %)))
       candidates)))
 
-(defn- split-all-leaves
+(defn split-all-leaves
   [n]
   ;{:post [(= (* 4 (count-leaves n))
   ;           (count-leaves %))]}
