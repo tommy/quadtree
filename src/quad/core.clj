@@ -1,5 +1,6 @@
 (ns quad.core
   (:use quad.zipper)
+  (:use [clojure.tools.logging :only [spy]])
   (:require [cljts.geom :as g])
   (:require [cljts.analysis :as a])
   (:require [cljts.relation :as r])
@@ -8,7 +9,158 @@
   (:import (com.vividsolutions.jts.geom
              Point Coordinate)))
 
-(load "private")
+;; JTS interop
+(defn- point?
+  [p]
+  (= Point (class p)))
+
+(defn- coordinate?
+  [c]
+  (= Coordinate (class c)))
+
+(defn- p
+  "Create a JTS point object. Input can be any of:
+  a JTS point object
+  a JTS coordinate object
+  a vector of 2 numbers
+  x and y values."
+  ([x]
+  (cond
+    (point? x) x
+    (coordinate? x) (g/point x)
+    (vector? x) (g/point (apply g/c x))))
+  ([x y]
+    (g/point (g/c x y))))
+
+(defn- x
+  [^Point p]
+  (.getX p))
+
+(defn- y
+  [^Point p]
+  (.getY p))
+
+(defn- bounding-corners
+  "The four corners of this geometry's bounding box,
+  returned as points."
+  [geometry]
+  {:post [(= 4 (count %))]}
+  (let [e (g/envelope geometry)]
+    (set (map g/point (g/coordinates e)))))
+
+(defn extrema
+  "Get the minimum and maximum x and y values of a
+  collection of points.
+  
+  Returns a vector:
+  [minx miny maxx maxy]"
+  [coll]
+  {:pre [(every? point? coll)]}
+  (let [xs (map x coll)
+        ys (map y coll)]
+    [(apply min xs)
+     (apply min ys)
+     (apply max xs)
+     (apply max ys)]))
+
+(defn rectangle
+  "Shorthand for constructing a rectangle given two corners."
+  [p q]
+  {:pre [(= 0 (g/dimension p))
+         (= 0 (g/dimension q))]
+   :post [(.isRectangle %)]}
+  (let [[minx miny maxx maxy] (extrema [p q])]
+    (g/polygon
+      (g/linear-ring
+        [(g/c minx miny)
+         (g/c minx maxy)
+         (g/c maxx maxy)
+         (g/c maxx miny)
+         (g/c minx miny)])
+      nil)))
+
+
+;; Quadtree datastructure operations
+
+(defrecord Node [boundary quads data])
+(declare add)
+
+(defn- node?
+  "True if the parameter represents a node."
+  [n]
+  (every?
+    (partial contains? n)
+    #{:boundary :quads :data}))
+
+(defn node
+  "Create an empty leaf node with the given boundary."
+  [boundary]
+  (Node. boundary [] #{}))
+
+;; splitting nodes
+
+(defn split
+  [n pos-fn & {:keys [capacity]}]
+  {:pre [(node? n)
+         (= 2 (g/dimension (:boundary n)))]
+   :post [(node? %)
+          (every? node? (:quads %))
+            ;(.equalsTopo (:boundary n)
+            ;             (reduce a/union (map :boundary (:quads %))))
+          ]}
+  (let [b (:boundary n)
+        center (g/centroid b)
+        corners (bounding-corners b)
+        quads (map
+                (comp
+                  node
+                  (partial a/intersection b)
+                  (partial rectangle center))
+                corners)
+        data (:data n)
+       ]
+    (-> (Node. b quads #{}) (with-meta {:position-fn pos-fn :capacity capacity}) (add data))))
+
+(defn check-capacity
+  [capacity node pos-fn]
+  {:pre [((complement nil?) capacity)]}
+  (let [n (count (:data node))]
+    (cond
+      (<= capacity 0) node
+      (<= n capacity) node
+      :otherwise (split node pos-fn :capacity capacity))))
+
+(defn- add-data
+  "Add an object to the given node's data field."
+  [node pos-fn e & {:keys [capacity] :or {capacity 0}}]
+  {:pre [((complement nil?) capacity)]}
+  (check-capacity capacity
+    (update-in node [:data] conj e)
+    pos-fn))
+
+(def ^:private leaf? (comp empty? :quads))
+
+(defn data
+  "The data stored in this node and all child nodes."
+  [node]
+  (let [d (:data node)
+        qs (:quads node)]
+    (reduce into
+      (set d)
+      (map data qs))))
+
+(defn get-position-fn
+  [quadtree]
+  {:post [(complement nil?)]}
+  (:position-fn (meta quadtree)))
+
+(defn get-capacity
+  [quadtree]
+  {:post [(complement nil?)]}
+  (:capacity (meta quadtree)))
+
+;; Some helpful functions on JTS objects
+
 
 ;; functions passed to clojure.zip/zipper
 (def children :quads)
@@ -57,13 +209,13 @@
         (recur (z/next zipper) (inc n))   ; if we're at a leaf, inc n
         (recur (z/next zipper) n)))))     ; otherwise just move on
 
-
 ;; inserting objects into quadtree
 
 (defn- add-one
   "Add a single object to the quadtree rooted at node."
   [node pos-fn e & {:keys [capacity] :or {capacity 0}}]
-  {:pre [(r/covers? (:boundary node) (pos-fn e))]}
+  {:pre [(r/covers? (:boundary node) (pos-fn e))
+         ((complement nil?) capacity)]}
   (let [pos (pos-fn e)
         pred (covered-by-node-predicate pos)
         loc (->
@@ -72,40 +224,15 @@
     (z/root
       (z/edit
         loc
-        add-data e))))
+        add-data pos-fn e :capacity capacity))))
 
 (defn add
   "Add a collection of objects to the quadtree rooted at node."
   [node coll]
   {:post [(clojure.set/subset? (set coll) (data %))]}
-  (let [pos-fn (get-position-fn node)]
-    (reduce #(add-one %1 pos-fn %2) node coll)))
-
-
-;; splitting nodes
-
-(defn split
-  [n]
-  {:pre [(node? n)
-         (= 2 (g/dimension (:boundary n)))]
-   :post [(node? %)
-          (every? node? (:quads %))
-            ;(.equalsTopo (:boundary n)
-            ;             (reduce a/union (map :boundary (:quads %))))
-          ]}
-  (let [b (:boundary n)
-        center (g/centroid b)
-        corners (bounding-corners b)
-        quads (map
-                (comp
-                  node
-                  (partial a/intersection b)
-                  (partial rectangle center))
-                corners)
-        data (:data n)
-       ]
-    (Node. b quads data)))
-    ;(-> (Node. b quads #{}) (add data))))
+  (let [pos-fn (get-position-fn node)
+        capacity (spy (get-capacity node))]
+    (reduce #(add-one %1 pos-fn %2 :capacity capacity) node coll)))
 
 
 (def to-jts (partial comp p))

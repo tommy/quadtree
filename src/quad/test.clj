@@ -35,11 +35,11 @@
 (def myquadtree
   (-> n
       quad-zip
-      (z/edit split)
+      (z/edit split guy-pos)
       z/down
-      (z/edit split)
+      (z/edit split guy-pos)
       z/root
-      (with-meta {:position-fn guy-pos})
+      (with-meta {:position-fn guy-pos :capacity 3})
   ))
 
 (def myzipper
