@@ -62,11 +62,7 @@
 
 (defn- add-one
   "Add a single object to the quadtree rooted at node."
-  ([node e]
-  (let [pos-fn (get-position-fn node)]
-    (add-one node pos-fn e)))
-
-  ([node pos-fn e]
+  [node pos-fn e & {:keys [capacity] :or {capacity 0}}]
   {:pre [(r/covers? (:boundary node) (pos-fn e))]}
   (let [pos (pos-fn e)
         pred (covered-by-node-predicate pos)
@@ -76,13 +72,14 @@
     (z/root
       (z/edit
         loc
-        add-data e)))))
+        add-data e))))
 
 (defn add
   "Add a collection of objects to the quadtree rooted at node."
   [node coll]
   {:post [(clojure.set/subset? (set coll) (data %))]}
-  (reduce add-one node coll))
+  (let [pos-fn (get-position-fn node)]
+    (reduce #(add-one %1 pos-fn %2) node coll)))
 
 
 ;; splitting nodes
@@ -108,6 +105,7 @@
         data (:data n)
        ]
     (Node. b quads data)))
+    ;(-> (Node. b quads #{}) (add data))))
 
 
 (def to-jts (partial comp p))
