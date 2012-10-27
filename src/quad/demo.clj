@@ -1,5 +1,6 @@
 (ns quad.demo
   (:require [cljts.geom :as g])
+  (:use lang)
   (:use quad.core)
   (:use quad.test)
   (:use quad.zipper)
@@ -15,17 +16,6 @@
             Point
             Polygon
             Geometry]))
-
-(defn atom?
-  "True if x is an atom."
-  [x]
-  (= clojure.lang.Atom
-    (class x)))
-
-(defn atom-
-  "Wraps r in a atom, unless r is already a atom."
-  [r]
-  (if (atom? r) r (atom r)))
 
 (defn tovec
   ([^Coordinate c]
@@ -51,20 +41,6 @@
       (doseq [v vs]
         (apply vertex v))
       (end-shape))))
-      
-(comment
-(def square
-  (g/polygon
-    (g/linear-ring
-      [(g/c 20 20) (g/c 10 20)
-       (g/c 50 50) (g/c 60 60)
-       (g/c 10 10) (g/c 20 10)
-
-
-       (g/c 20 20)
-      ])
-    nil))
-)
 
 (def dfs (partial tree-seq branch? children))
     
