@@ -1,83 +1,13 @@
 (ns quad.core
+  (:use lang)
   (:use quad.zipper)
+  (:use quad.jts)
   (:use [clojure.tools.logging :only [spy]])
-  (:require [cljts.geom :as g])
-  (:require [cljts.analysis :as a])
   (:require [cljts.relation :as r])
   (:require clojure.set)
   (:require [clojure.zip :as z])
   (:import (com.vividsolutions.jts.geom
              Point Coordinate)))
-
-;; JTS interop
-(defn- point?
-  [p]
-  (= Point (class p)))
-
-(defn- coordinate?
-  [c]
-  (= Coordinate (class c)))
-
-(defn- p
-  "Create a JTS point object. Input can be any of:
-  a JTS point object
-  a JTS coordinate object
-  a vector of 2 numbers
-  x and y values."
-  ([x]
-  (cond
-    (point? x) x
-    (coordinate? x) (g/point x)
-    (vector? x) (g/point (apply g/c x))))
-  ([x y]
-    (g/point (g/c x y))))
-
-(defn- x
-  [^Point p]
-  (.getX p))
-
-(defn- y
-  [^Point p]
-  (.getY p))
-
-(defn- bounding-corners
-  "The four corners of this geometry's bounding box,
-  returned as points."
-  [geometry]
-  {:post [(= 4 (count %))]}
-  (let [e (g/envelope geometry)]
-    (set (map g/point (g/coordinates e)))))
-
-(defn extrema
-  "Get the minimum and maximum x and y values of a
-  collection of points.
-  
-  Returns a vector:
-  [minx miny maxx maxy]"
-  [coll]
-  {:pre [(every? point? coll)]}
-  (let [xs (map x coll)
-        ys (map y coll)]
-    [(apply min xs)
-     (apply min ys)
-     (apply max xs)
-     (apply max ys)]))
-
-(defn rectangle
-  "Shorthand for constructing a rectangle given two corners."
-  [p q]
-  {:pre [(= 0 (g/dimension p))
-         (= 0 (g/dimension q))]
-   :post [(.isRectangle %)]}
-  (let [[minx miny maxx maxy] (extrema [p q])]
-    (g/polygon
-      (g/linear-ring
-        [(g/c minx miny)
-         (g/c minx maxy)
-         (g/c maxx maxy)
-         (g/c maxx miny)
-         (g/c minx miny)])
-      nil)))
 
 
 ;; Quadtree datastructure operations
@@ -97,33 +27,28 @@
   [boundary]
   (Node. boundary [] #{}))
 
+
 ;; splitting nodes
 
 (defn split
+  "Split a node into quadrants and add its data so that
+  it descends into the correct child node."
   [n pos-fn & {:keys [capacity]}]
-  {:pre [(node? n)
-         (= 2 (g/dimension (:boundary n)))]
-   :post [(node? %)
-          (every? node? (:quads %))
-            ;(.equalsTopo (:boundary n)
-            ;             (reduce a/union (map :boundary (:quads %))))
-          ]}
+  {:post [(node? %)
+          (every? node? (:quads %))]}
   (let [b (:boundary n)
-        center (g/centroid b)
-        corners (bounding-corners b)
-        quads (map
-                (comp
-                  node
-                  (partial a/intersection b)
-                  (partial rectangle center))
-                corners)
-        data (:data n)
-       ]
-    (-> (Node. b quads #{}) (with-meta {:position-fn pos-fn :capacity capacity}) (add data))))
+        nodes (map node (quadrants b))
+        data (:data n)]
+    (-> (Node. b nodes #{})
+        (with-meta {:position-fn pos-fn :capacity capacity})
+        (add data))))
 
 (defn check-capacity
+  "Check if node has more than capacity elements of data.
+  If so, split the node into quadrants."
   [capacity node pos-fn]
-  {:pre [((complement nil?) capacity)]}
+  {:pre [((complement nil?) capacity)
+         ((complement nil?) node)]}
   (let [n (count (:data node))]
     (cond
       (<= capacity 0) node
@@ -138,7 +63,7 @@
     (update-in node [:data] conj e)
     pos-fn))
 
-(def ^:private leaf? (comp empty? :quads))
+(def- leaf? (comp empty? :quads))
 
 (defn data
   "The data stored in this node and all child nodes."
@@ -159,8 +84,6 @@
   {:post [(complement nil?)]}
   (:capacity (meta quadtree)))
 
-;; Some helpful functions on JTS objects
-
 
 ;; functions passed to clojure.zip/zipper
 (def children :quads)
@@ -177,16 +100,6 @@
     children
     make-node
     n))
-    
-(defn within-node-predicate
-  "Return a predicate that returns true if geom is contained
-  within the node.
-  
-  That is, returns a function f such that:
-  (f node) <=> (within? geom (:boundary node))"
-  [geom]
-  {:pre [(g/simple? geom)]}
-  (comp (partial r/within? geom) :boundary))
 
 (defn covered-by-node-predicate
   "Return a predicate that returns true if geom is covered by
@@ -237,16 +150,14 @@
 
 (def to-jts (partial comp p))
 
-
 ;; querying a quadtree
 
 (defn query-geom
   [quadtree position-fn geometry]
-  {:pre [(= 2 (g/dimension geometry))]}
+  {:pre [(two-d? geometry)]}
   (let [zipper (quad-zip quadtree)
         pred (covered-by-node-predicate geometry)
-        candidates (data (z/node (follow-pred zipper pred)))
-        ]
+        candidates (data (z/node (follow-pred zipper pred)))]
    (filter
      (comp (partial r/covers? geometry) position-fn)
      candidates)))
@@ -255,22 +166,14 @@
 (defn query
   [quadtree position-fn center radius]
   (let [position-fn (to-jts position-fn)
-        center (apply p center)
-        minx (- (x center) radius)
-        miny (- (y center) radius)
-        maxx (+ (x center) radius)
-        maxy (+ (x center) radius)
-        bbox (rectangle (p minx miny)
-                        (p maxx maxy))
+        bbox (circle-bounding-box center radius)
         zipper (quad-zip quadtree)
         pred (covered-by-node-predicate bbox)
         candidates (data (z/node (follow-pred zipper pred)))
         ]
     (filter
-      #(>= radius
-          (a/distance center
-            (position-fn %)))
-      candidates)))
+      (comp within-radius position-fn)  ; have to extract position
+      candidates)))                     ; before passing to JTS interop
 
 (defn split-all-leaves
   [n]
