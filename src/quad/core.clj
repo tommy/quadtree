@@ -220,7 +220,7 @@
         pred (covered-by-node-predicate pos)
         loc (->
             (quad-zip node)
-            (follow-pred leaf? pred))]
+            (follow-pred pred))]
     (z/root
       (z/edit
         loc
@@ -245,7 +245,7 @@
   {:pre [(= 2 (g/dimension geometry))]}
   (let [zipper (quad-zip quadtree)
         pred (covered-by-node-predicate geometry)
-        candidates (data (z/node (follow-pred zipper leaf? pred)))
+        candidates (data (z/node (follow-pred zipper pred)))
         ]
    (filter
      (comp (partial r/covers? geometry) position-fn)
@@ -264,7 +264,7 @@
                         (p maxx maxy))
         zipper (quad-zip quadtree)
         pred (covered-by-node-predicate bbox)
-        candidates (data (z/node (follow-pred zipper leaf? pred)))
+        candidates (data (z/node (follow-pred zipper pred)))
         ]
     (filter
       #(>= radius
