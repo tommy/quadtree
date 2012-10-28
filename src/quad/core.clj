@@ -5,9 +5,7 @@
   (:use [clojure.tools.logging :only [spy]])
   (:require [cljts.relation :as r])
   (:require clojure.set)
-  (:require [clojure.zip :as z])
-  (:import (com.vividsolutions.jts.geom
-             Point Coordinate)))
+  (:require [clojure.zip :as z]))
 
 
 ;; Quadtree datastructure operations
