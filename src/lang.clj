@@ -18,3 +18,8 @@
   Analagous to defn-."
   [name & decls]
   (list* `def ^:private name decls))
+
+(defn copy-meta
+  "Returns a copy of 'to' with the metadata of 'from'."
+  [from to]
+  (with-meta to (meta from)))
