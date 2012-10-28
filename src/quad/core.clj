@@ -168,9 +168,10 @@
 ;; querying a quadtree
 
 (defn query-geom
-  [quadtree position-fn geometry]
+  [quadtree geometry]
   {:pre [(two-d? geometry)]}
-  (let [zipper (quad-zip quadtree)
+  (let [position-fn (get-position-fn quadtree)
+        zipper (quad-zip quadtree)
         pred (covered-by-node-predicate geometry)
         candidates (data (z/node (follow-pred zipper pred)))]
    (filter
@@ -179,16 +180,18 @@
 
 
 (defn query
-  [quadtree position-fn center radius]
-  (let [position-fn (to-jts position-fn)
+  [quadtree center radius]
+  (let [position-fn (get-position-fn quadtree)
         bbox (circle-bounding-box center radius)
         zipper (quad-zip quadtree)
         pred (covered-by-node-predicate bbox)
         candidates (data (z/node (follow-pred zipper pred)))
         ]
     (filter
-      (comp within-radius position-fn)  ; have to extract position
-      candidates)))                     ; before passing to JTS interop
+      (comp
+        (within-radius center radius)   ; have to extract position
+        position-fn)                    ; before passing to JTS interop
+      candidates)))
 
 (defn quad
   "Construct a quadtree object.
