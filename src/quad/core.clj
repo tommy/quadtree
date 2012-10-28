@@ -22,8 +22,32 @@
 
 (defn node
   "Create an empty leaf node with the given boundary."
-  [boundary]
-  (Node. boundary [] #{}))
+  [boundary & {:keys [position-fn
+                      capacity
+                      children
+                      data]
+               :or   {children []
+                      data     #{}}}]
+  (with-meta
+    (Node. boundary children data)
+    {:position-fn position-fn
+     :capacity capacity}))
+
+(defn get-position-fn
+  "The position-fn of a quadtree is the fn that is used to
+  get the position of each item in the quadtree. It should
+  return JTS Point objects."
+  [quadtree]
+  {:post [(complement nil?)]}
+  (:position-fn (meta quadtree)))
+
+(defn get-capacity
+  "The capacity of the quadtree is the number of data
+  elements a node may contain before it should be divided."
+  [quadtree]
+  {:post [(complement nil?)]}
+  (:capacity (meta quadtree)))
+
 
 
 ;; splitting nodes
@@ -31,35 +55,39 @@
 (defn split
   "Split a node into quadrants and add its data so that
   it descends into the correct child node."
-  [n pos-fn & {:keys [capacity]}]
+  [n]
   {:post [(node? %)
           (every? node? (:quads %))]}
-  (let [b (:boundary n)
-        nodes (map node (quadrants b))
+  (let [pos-fn (get-position-fn n)
+        capacity (get-capacity n)
+        b (:boundary n)
+        nodes (map
+                #(node % :position-fn pos-fn :capacity capacity)
+                (quadrants b))
         data (:data n)]
-    (-> (Node. b nodes #{})
-        (with-meta {:position-fn pos-fn :capacity capacity})
+    (-> (node b :children nodes :position-fn pos-fn :capacity capacity)
         (add data))))
 
 (defn check-capacity
   "Check if node has more than capacity elements of data.
   If so, split the node into quadrants."
-  [capacity node pos-fn]
-  {:pre [((complement nil?) capacity)
+  [node]
+  {:pre [((complement nil?) (get-capacity node))
          ((complement nil?) node)]}
-  (let [n (count (:data node))]
+  (let [n (count (:data node))
+        capacity (get-capacity node)]
     (cond
       (<= capacity 0) node
       (<= n capacity) node
-      :otherwise (split node pos-fn :capacity capacity))))
+      :otherwise (split node))))
 
 (defn- add-data
   "Add an object to the given node's data field."
-  [node pos-fn e & {:keys [capacity] :or {capacity 0}}]
-  {:pre [((complement nil?) capacity)]}
-  (check-capacity capacity
-    (update-in node [:data] conj e)
-    pos-fn))
+  [node e]
+  {:pre [((complement nil?) (get-capacity node))]}
+  (-> node
+      (update-in [:data] conj e)
+      check-capacity))
 
 (def- leaf? (comp empty? :quads))
 
@@ -71,16 +99,6 @@
     (reduce into
       (set d)
       (map data qs))))
-
-(defn get-position-fn
-  [quadtree]
-  {:post [(complement nil?)]}
-  (:position-fn (meta quadtree)))
-
-(defn get-capacity
-  [quadtree]
-  {:post [(complement nil?)]}
-  (:capacity (meta quadtree)))
 
 
 ;; functions passed to clojure.zip/zipper
@@ -124,10 +142,11 @@
 
 (defn- add-one
   "Add a single object to the quadtree rooted at node."
-  [node pos-fn e & {:keys [capacity] :or {capacity 0}}]
-  {:pre [(r/covers? (:boundary node) (pos-fn e))
-         ((complement nil?) capacity)]}
-  (let [pos (pos-fn e)
+  [node e]
+  {:pre [(r/covers? (:boundary node) ((get-position-fn node) e))
+         ((complement nil?) (get-capacity node))]}
+  (let [pos-fn (get-position-fn node)
+        pos (pos-fn e)
         pred (covered-by-node-predicate pos)
         loc (->
             (quad-zip node)
@@ -135,15 +154,13 @@
     (z/root
       (z/edit
         loc
-        add-data pos-fn e :capacity capacity))))
+        add-data e))))
 
 (defn add
   "Add a collection of objects to the quadtree rooted at node."
   [node coll]
   {:post [(clojure.set/subset? (set coll) (data %))]}
-  (let [pos-fn (get-position-fn node)
-        capacity (spy (get-capacity node))]
-    (reduce #(add-one %1 pos-fn %2 :capacity capacity) node coll)))
+  (reduce add-one node coll))
 
 
 (def to-jts (partial comp p))
@@ -173,23 +190,6 @@
       (comp within-radius position-fn)  ; have to extract position
       candidates)))                     ; before passing to JTS interop
 
-(defn split-all-leaves
-  [n]
-  ;{:post [(= (* 4 (count-leaves n))
-  ;           (count-leaves %))]}
-  (if (leaf? n)
-    (split n)
-    (assoc n :quads
-      (map split-all-leaves (:quads n)))))
-  
-
-(defn- build-empty-quadtree
-  [boundary depth]
-  (loop [root (node boundary) depth depth]
-    (if-not (zero? depth)
-      (recur (split-all-leaves root) (dec depth))
-      root)))
-
 (defn quad
   "Construct a quadtree object.
 
@@ -199,13 +199,14 @@
                 of each member of coll
   depth       - the depth of the tree (3 or 4 is recommended)
   coll        - a collection of objects to be put in the quadtree."
-  [corner1 corner2 position-fn depth coll]
+  [corner1 corner2 position-fn capacity coll]
   (let [position-fn (to-jts position-fn)
         boundary (rectangle
-                   (apply p corner1)
-                   (apply p corner2))
+                   (p corner1)
+                   (p corner2))
         empty-tree 
           (with-meta
-            (build-empty-quadtree boundary depth)
-            {:position-fn position-fn})]
+            (node boundary)
+            {:position-fn position-fn
+             :capacity capacity})]
     (add empty-tree coll)))

@@ -27,6 +27,14 @@
 (def n
   (node square))
 
+(def tree
+  (quad
+    [0 0]
+    [500 500]
+    :pos
+    4
+    #{}))
+
 (defn guy-pos
   [e]
   (let [v (:pos e)]
@@ -34,12 +42,12 @@
 
 (def myquadtree
   (-> n
-      quad-zip
-      (z/edit split guy-pos)
-      z/down
-      (z/edit split guy-pos)
-      z/root
       (with-meta {:position-fn guy-pos :capacity 3})
+      quad-zip
+      (z/edit split)
+      z/down
+      (z/edit split)
+      z/root
   ))
 
 (def myzipper
