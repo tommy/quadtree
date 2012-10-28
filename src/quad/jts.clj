@@ -111,9 +111,9 @@
   "Returns a predicate that tests if its argument
   falls within a circle defined by center and radius."
   [center radius]
-  (fn [^Point p]
+  (fn [^Point q]
     (>= radius
-      (distance center p))))
+      (distance (p center) q))))
 
 
 
