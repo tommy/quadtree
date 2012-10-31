@@ -6,7 +6,7 @@
   pred is true. Returns the zipper at the last location
   for which pred is true."
   [zipper pred]
-  {:pre [(pred (z/node zipper))]}
+  ;{:pre [(pred (z/node zipper))]}
   (let [leaf? (complement z/branch?)]
     (if (leaf? zipper)                     ; if the node is a leaf
       zipper                               ; then we are done

@@ -21,6 +21,12 @@
   ([^Coordinate c]
   [(.x c) (.y c)]))
 
+(defn pos-fn
+  [quadtree]
+  (comp
+    (comp tovec (memfn getCoordinate))
+    (:position-fn (meta quadtree))))
+
 (defn duplicate-inner
   [xs]
   (drop 1
@@ -61,6 +67,16 @@
     (map pos-fn
       (mapcat :data (dfs quadtree)))))
 
+(defn selected-object-seq
+  [quadtree]
+  {:pre [(not (atom? quadtree))]}
+  (let [pos-fn
+          (comp
+            (comp tovec (memfn getCoordinate))
+            (:position-fn (meta quadtree)))]
+    (map pos-fn
+      (query quadtree [(mouse-x) (mouse-y)] 50))))
+
 (defn setup
   [quadtree]
   ())
@@ -73,6 +89,10 @@
     (quil/stroke-weight 5)
     (doseq [o (object-seq quadtree)]
       (apply quil/point o))
+    (quil/stroke 255 0 0)
+    (doseq [o (selected-object-seq quadtree)]
+      (apply quil/point o))
+    (quil/stroke (quil/color 0))
     (quil/stroke-weight 1)))
 
 (defn mouse-clicked

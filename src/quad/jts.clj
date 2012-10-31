@@ -66,7 +66,7 @@
 (defn rectangle
   "Shorthand for constructing a rectangle given two corners."
   [^Point p ^Point q]
-  {:post [(rectangle? %)]}
+  ;{:post [(rectangle? %)]}
   (let [[minx miny maxx maxy] (extrema [p q])]
     (polygon
       (linear-ring
