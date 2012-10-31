@@ -75,7 +75,7 @@
             (comp tovec (memfn getCoordinate))
             (:position-fn (meta quadtree)))]
     (map pos-fn
-      (query quadtree [(mouse-x) (mouse-y)] 50))))
+      (query quadtree [(mouse-x) (mouse-y)] 100))))
 
 (defn setup
   [quadtree]
