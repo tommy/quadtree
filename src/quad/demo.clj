@@ -68,21 +68,21 @@
       (mapcat :data (dfs quadtree)))))
 
 (defn selected-object-seq
-  [quadtree]
+  [quadtree query-radius]
   {:pre [(not (atom? quadtree))]}
   (let [pos-fn
           (comp
             (comp tovec (memfn getCoordinate))
             (:position-fn (meta quadtree)))]
     (map pos-fn
-      (query quadtree [(mouse-x) (mouse-y)] 100))))
+      (query quadtree [(mouse-x) (mouse-y)] query-radius))))
 
 (defn setup
   [quadtree]
   ())
 
 (defn draw
-  [quadtree]
+  [quadtree query-radius]
   (let [quadtree @quadtree]
     (doseq [b (boundary-seq quadtree)]
       (draw-geom b :lines))
@@ -90,7 +90,7 @@
     (doseq [o (object-seq quadtree)]
       (apply quil/point o))
     (quil/stroke 255 0 0)
-    (doseq [o (selected-object-seq quadtree)]
+    (doseq [o (selected-object-seq quadtree query-radius)]
       (apply quil/point o))
     (quil/stroke (quil/color 0))
     (quil/stroke-weight 1)))
@@ -102,16 +102,18 @@
         f #(add %1 [e])]
     (swap! quadtree f)))
 
+(def atree (atom- tree))
 
 (defn run
-  ([quadtree]
+  ([quadtree query-radius]
   
   (let [quadtree (atom- quadtree)]
     (defsketch quadtree-sketch
       :title "Quadtree"
       :setup (partial setup quadtree)
-      :draw (partial draw quadtree)
-      :mouse-clicked (partial mouse-clicked quadtree))))
+      :draw (partial draw quadtree query-radius)
+      :mouse-clicked (partial mouse-clicked quadtree)
+      :size [500 500])))
 
   ([]
-  (run myquadtree)))
+  (run atree 0)))
