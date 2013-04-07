@@ -30,7 +30,7 @@
 (defn within-radius
   [x others r]
   (let [index (:index (meta others))]
-    (query index position (position x) r)))
+    (query index (position x) r)))
 
 (defn with-probability
   [p f else-f]

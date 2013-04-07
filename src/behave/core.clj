@@ -36,7 +36,7 @@
                  drift-language
                  drift-language-towards-neighbors}}))
 
-(def behavers (conj (repeatedly 5 gen-behaver) player))
+(def behavers (conj (repeatedly 50 gen-behaver) player))
 
 (defn behave
   [b others]

@@ -117,3 +117,5 @@
 
   ([]
   (run atree 0)))
+
+(def -main run)
